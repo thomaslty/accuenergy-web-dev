@@ -1,5 +1,6 @@
 <template>
     <div>
+        <!-- map -->
         <GmapMap :center="center" :zoom="zoom" id="gmap">
             <GmapMarker v-if="self_marker" :position="self_marker" />
             <GmapMarker v-for="(marker, index) in markers" :key="index" :position="marker"
@@ -9,7 +10,11 @@
                 </GmapInfoWindow>
             </GmapMarker>
         </GmapMap>
+
+        <!-- get current location -->
         <div @click="getCurrentLocation" class="location-button"></div>
+
+        <!-- search location -->
         <div class="container-fluid search">
             <div class="input-group rounded" id="search">
                 <PlaceInput class="form-control rounded search-input" placeholder="Search" :selectFirstOnEnter="true"
@@ -21,12 +26,47 @@
                 </span>
             </div>
         </div>
+
+        <!-- open search history btn -->
+        <div @click="toggleHistoryTable" class="search-history-button"></div>
+
+        <!-- search history table -->
+        <div v-if="isHistoryTableOpened" class="history-table-wrapper">
+            <div id="history-table">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col">
+                            <button @click="deleteSelected" class="btn btn-secondary">Delete Selected</button>
+                        </div>
+                        <div class="col-sm-auto">
+                            <button @click="toggleHistoryTable" class="btn btn-danger">X</button>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="table">
+                    <tbody>
+                        <tr v-for="(record, index) in paginatedRecords" :key="index">
+                            <td>
+                                <input type="checkbox" :value="record" v-model="selectedRecords">
+                            </td>
+                            <td>{{ record.address }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <paginate :page-count="pageCount" :click-handler="changePage" :prev-text="'Prev'" :next-text="'Next'"
+                    :container-class="'pagination'" :page-class="'page-item'" :page-link-class="'page-link'"
+                    :prev-class="'page-item'" :next-class="'page-item'" :prev-link-class="'page-link'"
+                    :next-link-class="'page-link'" :active-class="'active'"></paginate>
+            </div>
+        </div>
     </div>
 </template>
   
 <script>
 import { gmapApi } from 'vue2-google-maps';
 import PlaceInput from 'vue2-google-maps/dist/components/placeInput';
+import Paginate from 'vuejs-paginate'
 
 export default {
     data() {
@@ -37,13 +77,22 @@ export default {
             markers: [],
             searchQuery: '',
             hoveredMarker: null,
+            searchHistory: [],
+            selectedRecords: [],
+            isHistoryTableOpened: false,
+            currentPage: 1,
+            paginatedRecords: [],
         }
     },
     components: {
         PlaceInput,
+        'paginate': Paginate,
     },
     computed: {
-        google: gmapApi
+        google: gmapApi,
+        pageCount() {
+            return Math.max(Math.ceil(this.searchHistory.length / 10), 1);
+        }
     },
     methods: {
         getCurrentLocation() {
@@ -85,6 +134,11 @@ export default {
                     address: place.formatted_address,
                     isOpened: false
                 });
+                this.searchHistory.push({
+                    lat: lat,
+                    lng: lng,
+                    address: place.formatted_address,
+                })
             }
         },
         toggleInfoWindow(marker) {
@@ -93,8 +147,41 @@ export default {
             } else {
                 marker.isOpened = true
             }
+        },
+        changePage(pageNumber) {
+            this.currentPage = pageNumber;
+        },
+        deleteSelected() {
+            console.log("-- before delete --")
+            console.log(this.searchHistory)
+            console.log(this.markers)
+
+            for (let record of this.selectedRecords) {
+                this.searchHistory = this.searchHistory.filter(item => item !== record);
+                this.markers = this.markers.filter(marker => marker.lat !== record.lat && marker.lng !== record.lng);
+            }
+            this.selectedRecords = [];
+
+            console.log("-- after delete --")
+            console.log(this.searchHistory)
+            console.log(this.markers)
+
+            this.toggleHistoryTable()
+        },
+        setPaginatedRecords() {
+            const start = (this.currentPage - 1) * 10;
+            const end = start + 10;
+            const records = this.searchHistory.slice(start, end);
+            console.log(records)
+            return records
+        },
+        toggleHistoryTable() {
+            this.paginatedRecords = this.setPaginatedRecords()
+
+            this.isHistoryTableOpened = !this.isHistoryTableOpened
         }
-    }
+    },
+    // mixins: [Paginate]
 }
 </script>
   
@@ -110,6 +197,22 @@ export default {
     bottom: 200px;
     z-index: 999;
     background-image: url("../assets/target.png");
+    background-size: calc(100% - 15px);
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 40px;
+    height: 40px;
+    background-color: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.search-history-button {
+    position: fixed;
+    right: 10px;
+    bottom: 250px;
+    z-index: 999;
+    background-image: url("../assets/history.png");
     background-size: calc(100% - 15px);
     background-repeat: no-repeat;
     background-position: center;
@@ -152,5 +255,35 @@ export default {
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+}
+
+.history-table-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#history-table {
+    min-width: 400px;
+    min-height: 400px;
+    background-color: #fff;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    border-radius: 5px;
+    box-shadow: 0 0px 2px rgb(0 0 0 / 25%);
+}
+
+
+#history-table .pagination {
+    margin-top: auto;
 }
 </style>
