@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import HomePage from '../components/HomePage.vue'
 import MapPage from "../components/MapPage"
 
 Vue.use(VueRouter)
@@ -8,13 +7,8 @@ Vue.use(VueRouter)
 const routes = [
     {
         path: '/',
-        name: 'HomePage',
-        component: HomePage // Set Home component as the default component
-    },
-    {
-        path: '/map',
         name: 'MapPage',
-        component: MapPage // Set Home component as the default component
+        component: MapPage
     },
 ]
 
