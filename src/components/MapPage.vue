@@ -45,18 +45,21 @@
                     </div>
                 </div>
 
-                <table class="table">
-                    <tbody>
-                        <tr v-for="(record, index) in paginatedRecords" :key="index">
-                            <td>
-                                <input type="checkbox" :value="record" v-model="selectedRecords">
-                            </td>
-                            <td>{{ record.address }}</td>
-                            <td>{{ record.time?.timeZone }} GMT{{ record.time?.gmtOffset }}</td>
-                            <td>{{ record.time?.localDateTime }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table class="table">
+                        <tbody>
+                            <tr v-for="(record, index) in paginatedRecords" :key="index">
+                                <td>{{ index + 1 }}.</td>
+                                <td>
+                                    <input type="checkbox" :value="record" v-model="selectedRecords">
+                                </td>
+                                <td>{{ record.address }}</td>
+                                <td>{{ record.time?.timeZone }} GMT{{ record.time?.gmtOffset }}</td>
+                                <td>{{ record.time?.localDateTime }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <paginate :page-count="pageCount" :click-handler="changePage" :prev-text="'Prev'" :next-text="'Next'"
                     :container-class="'pagination'" :page-class="'page-item'" :page-link-class="'page-link'"
                     :prev-class="'page-item'" :next-class="'page-item'" :prev-link-class="'page-link'"
@@ -162,6 +165,7 @@ export default {
         },
         changePage(pageNumber) {
             this.currentPage = pageNumber;
+            this.updateHistoryRecord();
         },
         deleteSelected() {
             for (let record of this.selectedRecords) {
@@ -179,8 +183,11 @@ export default {
             return records
         },
         toggleHistoryTable() {
-            this.paginatedRecords = this.setPaginatedRecords()
+            this.updateHistoryRecord();
             this.isHistoryTableOpened = !this.isHistoryTableOpened
+        },
+        updateHistoryRecord() {
+            this.paginatedRecords = this.setPaginatedRecords()
         },
         async fetchTimeZone(lat, lng) {
             let self = this
@@ -311,6 +318,7 @@ export default {
 #history-table {
     min-width: 400px;
     min-height: 400px;
+    max-width: 1200px;
     background-color: #fff;
     display: inline-flex;
     flex-direction: column;
@@ -320,6 +328,10 @@ export default {
     box-shadow: 0 0px 2px rgb(0 0 0 / 25%);
 }
 
+.table-container {
+    max-height: 50%;
+    overflow-y: auto;
+}
 
 #history-table .pagination {
     margin-top: auto;
