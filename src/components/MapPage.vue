@@ -6,7 +6,8 @@
             <GmapMarker v-for="(marker, index) in markers" :key="index" :position="marker"
                 @mouseover="hoveredMarker = marker" @mouseout="hoveredMarker = null" @click="toggleInfoWindow(marker)">
                 <GmapInfoWindow :opened="marker.isOpened" @closeclick="marker.isOpened = false">
-                    {{ marker.address }}
+                    {{ marker.address }} <br />
+                    {{ marker.time?.timeZone }} GMT{{ marker.time?.gmtOffset }}, {{ marker.time?.localDateTime }}
                 </GmapInfoWindow>
             </GmapMarker>
         </GmapMap>
@@ -51,6 +52,8 @@
                                 <input type="checkbox" :value="record" v-model="selectedRecords">
                             </td>
                             <td>{{ record.address }}</td>
+                            <td>{{ record.time?.timeZone }} GMT{{ record.time?.gmtOffset }}</td>
+                            <td>{{ record.time?.localDateTime }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -116,12 +119,15 @@ export default {
         searchLocation() {
             console.log("Searching for: ", this.searchQuery);
         },
-        placeChanged(place) {
+        async placeChanged(place) {
             console.log(place)
             if (place.geometry) {
                 // Use the coordinates of the selected place for center and marker
                 let lat = place.geometry.location.lat()
                 let lng = place.geometry.location.lng()
+
+                let time = await this.fetchTimeZone(lat, lng)
+                console.log(time)
 
                 this.center = {
                     lat: lat,
@@ -132,12 +138,14 @@ export default {
                     lat: lat,
                     lng: lng,
                     address: place.formatted_address,
+                    time: time,
                     isOpened: false
                 });
-                this.searchHistory.push({
+                this.searchHistory.unshift({
                     lat: lat,
                     lng: lng,
                     address: place.formatted_address,
+                    time: time
                 })
             }
         },
@@ -152,20 +160,11 @@ export default {
             this.currentPage = pageNumber;
         },
         deleteSelected() {
-            console.log("-- before delete --")
-            console.log(this.searchHistory)
-            console.log(this.markers)
-
             for (let record of this.selectedRecords) {
                 this.searchHistory = this.searchHistory.filter(item => item !== record);
                 this.markers = this.markers.filter(marker => marker.lat !== record.lat && marker.lng !== record.lng);
             }
             this.selectedRecords = [];
-
-            console.log("-- after delete --")
-            console.log(this.searchHistory)
-            console.log(this.markers)
-
             this.toggleHistoryTable()
         },
         setPaginatedRecords() {
@@ -177,11 +176,46 @@ export default {
         },
         toggleHistoryTable() {
             this.paginatedRecords = this.setPaginatedRecords()
-
             this.isHistoryTableOpened = !this.isHistoryTableOpened
-        }
+        },
+        async fetchTimeZone(lat, lng) {
+            let self = this
+            const timestamp = Math.floor(Date.now() / 1000);
+            let task = new Promise(function (resolve, reject) {
+                fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lng}&timestamp=${timestamp}&key=AIzaSyCY_X-dEZ1P0SOgL1LkRvD0ceL7aA3wCBk`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let result = {
+                            timeZone: data.timeZoneId,
+                            dstOffset: data.dstOffset,
+                            rawOffset: data.rawOffset,
+                            localDateTime: self.getDateTime(data.rawOffset, data.dstOffset),
+                            gmtOffset: data.rawOffset / 3600 > 0 ? `+${data.rawOffset / 3600}` : data.rawOffset / 3600,
+                        }
+                        resolve(result)
+                    })
+                    .catch(error => {
+                        console.log('An error occurred:', error)
+                        reject(false)
+                    });
+            })
+
+            try {
+                let result = await task;
+                return result
+            } catch (e) {
+                console.log(e)
+                return false
+            }
+
+        },
+        getDateTime(rawOffset, dstOffset) {
+            const date = new Date();
+            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+            const localDateTime = new Date(utc + (1000 * rawOffset) + (1000 * dstOffset));
+            return localDateTime.toLocaleString();
+        },
     },
-    // mixins: [Paginate]
 }
 </script>
   
