@@ -134,19 +134,23 @@ export default {
                     lng: lng
                 };
                 this.zoom = 15;
-                this.markers.push({
-                    lat: lat,
-                    lng: lng,
-                    address: place.formatted_address,
-                    time: time,
-                    isOpened: false
-                });
-                this.searchHistory.unshift({
-                    lat: lat,
-                    lng: lng,
-                    address: place.formatted_address,
-                    time: time
-                })
+                if (this.markers.find(v => v.id == place.place_id) === undefined) {
+                    this.markers.push({
+                        id: place.place_id,
+                        lat: lat,
+                        lng: lng,
+                        address: place.formatted_address,
+                        time: time,
+                        isOpened: false
+                    });
+                    this.searchHistory.unshift({
+                        id: place.place_id,
+                        lat: lat,
+                        lng: lng,
+                        address: place.formatted_address,
+                        time: time
+                    })
+                }
             }
         },
         toggleInfoWindow(marker) {
