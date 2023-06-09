@@ -1,5 +1,9 @@
 # accuenergy-web-dev
 
+![explain](/src/assets/example.png)
+the **first** icon is **search history**
+the **second** icon is **get current location**
+
 ## Project setup
 ```
 npm install
